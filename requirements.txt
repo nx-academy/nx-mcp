@@ -25,6 +25,7 @@ Jinja2==3.1.6
 jiter==0.10.0
 libsql-client==0.3.1
 MarkupSafe==3.0.2
+mcp[cli]>=1.0.0
 multidict==6.6.4
 openai==1.99.9
 packaging==25.0
@@ -53,3 +54,4 @@ typing-inspection==0.4.1
 typing_extensions==4.14.1
 urllib3==2.5.0
 yarl==1.20.1
+
