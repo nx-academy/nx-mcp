@@ -7,6 +7,8 @@ services:
       - ./.env
     tty: true
     stdin_open: true
+    ports:
+      - 8000:8000
     volumes:
       - ./:/workspaces/nx-ai
       - ./.vim/.vimrc:/root/.vimrc
