@@ -183,7 +183,8 @@ call plug#begin(has('nvim') ? stdpath('data') . '/plugged' : '~/.vim/plugged')
 " Declare the list of plugins.
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
-
+Plug 'tpope/vim-sensible'
+Plug 'junegunn/seoul256.vim'
 
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
@@ -225,6 +226,7 @@ set wrap linebreak
 
 " Colorscheme **At the moment, I don't use a custom color scheme**
 " colo seoul256
+colo seoul256-light
 
 " Fix Redrawtime exceeded syntax highlighting disabled
 set re=0
@@ -239,4 +241,5 @@ let g:fzf_action = {
 " ################################
 " ######## /Personal Settings  ###
 " ################################
+
 
