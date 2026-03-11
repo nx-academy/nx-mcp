@@ -28,7 +28,7 @@ def get_weather(latitude: float, longitude: float) -> dict:
 
 
 @mcp.tool()
-def fetch_news(topic: str) -> dict:
+def fetch_news_by_topic(topic: str) -> dict:
     """Retrieve latest news about a specific topic via NewsAPI"""
     api_key = os.environ.get("NEWS_API_KEY")
     if not api_key:
@@ -51,6 +51,39 @@ def fetch_news(topic: str) -> dict:
     articles = data.get("articles", [])
     if not articles:
         return {"message": f"No news found for subject: {topic}"}
+
+    return [
+        {
+            "title": a["title"],
+            "url": a["url"],
+            "description": a["description"],
+            "publishedAt": a["publishedAt"]
+        }
+        for a in articles
+    ]
+
+
+@mcp.tool()
+def fetch_news_by_source(source: str) -> dict:
+    """Retrieve latest news from a specific media (e.g. Le monde) via NewsAPI"""
+    api_key = os.environ.get("NEWS_API_KEY")
+    if not api_key:
+        raise ValueError("NEWS_API_KEY is not set")
+
+    url = "https://newsapi.org/v2/top-headlines"
+    params = {
+        "sources": source,
+        "apiKey": api_key
+    }
+
+    with httpx.Client() as client:
+        response = client.get(url, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+    articles = data.get("articles", [])
+    if not articles:
+        return {"message": "Not news found for source: {source}"}
 
     return [
         {
