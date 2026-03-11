@@ -1,6 +1,12 @@
 import os
 import httpx
+import asyncio
 from mcp.server.fastmcp import FastMCP
+
+from nx_ai.turso_service.turso_api import insert_news_in_db
+from nx_ai.github_service.github_api import trigger_gh_rebuild
+from nx_ai.utils.slugify import slugify_title
+
 
 mcp = FastMCP("nx-mcp", host="0.0.0.0")
 
@@ -94,6 +100,27 @@ def fetch_news_by_source(source: str) -> dict:
         }
         for a in articles
     ]
+
+
+@mcp.tool()
+async def publish_news(title: str, content: str, url: str) -> dict:
+    """Insert new in the Turso Database and trigger a new build"""
+    slug = slugify_title(title)
+
+    await insert_news_in_db(
+        title,
+        content,
+        url,
+        slug
+    )
+
+    trigger_gh_rebuild()
+
+    return {
+        "success": True,
+        "message": f"✅  News published: {title}",
+        "slug": slug
+    }
 
 
 if __name__ == "__main__":
