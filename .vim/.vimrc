@@ -225,8 +225,8 @@ set tw=79
 set wrap linebreak
 
 " Colorscheme **At the moment, I don't use a custom color scheme**
-colo seoul256
-" colo seoul256-light
+" colo seoul256
+colo seoul256-light
 
 " Fix Redrawtime exceeded syntax highlighting disabled
 set re=0
