@@ -5,7 +5,9 @@ from mcp.server.fastmcp import FastMCP
 
 from nx_ai.turso_service.turso_api import insert_news_in_db
 from nx_ai.github_service.github_api import trigger_gh_rebuild
-from nx_ai.utils.slugify import slugify_title
+from nx_ai.workflows.generate_quiz import generate_quiz_beta
+from nx_ai.workflows.generate_recap import generate_recap_beta
+from nx_ai.utils.slugify import slugify_title, slug_from_url
 
 
 mcp = FastMCP("nx-mcp", host="0.0.0.0")
@@ -89,7 +91,7 @@ def fetch_news_by_source(source: str) -> dict:
 
     articles = data.get("articles", [])
     if not articles:
-        return {"message": "Not news found for source: {source}"}
+        return {"message": f"Not news found for source: {source}"}
 
     return [
         {
@@ -121,6 +123,24 @@ async def publish_news(title: str, content: str, url: str) -> dict:
         "message": f"✅  News published: {title}",
         "slug": slug
     }
+
+
+@mcp.tool()
+def generate_quiz(url: str, simulate: bool = False) -> dict:
+    """Generate a 10-question multiple-choice quiz from an article URL and open a
+    pull request on nx-academy.github.io. The filename is derived from the URL.
+    Set simulate=True for a dry-run (no OpenAI call, no pull request)."""
+    filename = slug_from_url(url)
+    return generate_quiz_beta(url, filename, simulate)
+
+
+@mcp.tool()
+def generate_recap(urls: list[str], title: str, simulate: bool = False) -> dict:
+    """Generate a Markdown recap summarizing several articles and open a pull
+    request on nx-academy.github.io. The filename is derived from the title.
+    Set simulate=True for a dry-run (no OpenAI call, no pull request)."""
+    filename = slugify_title(title)
+    return generate_recap_beta(urls=urls, filename=filename, title=title, simulate=simulate)
 
 
 if __name__ == "__main__":
