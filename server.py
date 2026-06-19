@@ -123,5 +123,12 @@ async def publish_news(title: str, content: str, url: str) -> dict:
     }
 
 
+@mcp.tool()
+async def publish_now_note(content: str) -> dict:
+    """Insert a new note for En Ce Moment in the Turso Database and trigger a new build"""
+    print("====")
+    print("====")
+    print("====")
+
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")

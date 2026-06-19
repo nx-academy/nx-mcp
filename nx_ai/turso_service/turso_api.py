@@ -34,3 +34,14 @@ async def insert_news_in_db(title: str, content: str, url: str, slug: str):
         print("✅ News added in NewsFeed Table")
     finally:
         await client.close()
+
+
+async def insert_now_note_in_db(content: str):
+    
+    now = datetime.utcnow().isoformat()
+
+    print("====")
+    print(now)
+    print("====")
+    print(content)
+    print("====")
