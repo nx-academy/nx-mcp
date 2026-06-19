@@ -3,7 +3,10 @@ import httpx
 import asyncio
 from mcp.server.fastmcp import FastMCP
 
-from nx_ai.turso_service.turso_api import insert_news_in_db
+from nx_ai.turso_service.turso_api import (
+    insert_news_in_db,
+    insert_now_note_in_db
+)
 from nx_ai.github_service.github_api import trigger_gh_rebuild
 from nx_ai.utils.slugify import slugify_title
 
@@ -122,6 +125,18 @@ async def publish_news(title: str, content: str, url: str) -> dict:
         "slug": slug
     }
 
+
+@mcp.tool()
+async def publish_now_note(content: str) -> dict:
+    """Insert a new note for En Ce Moment in the Turso Database and trigger a new build"""
+    await insert_now_note_in_db(content)
+
+    trigger_gh_rebuild()
+
+    return {
+        "success": True,
+        "message": f"✅  Now Note published: {content}",
+    }
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")

@@ -34,3 +34,22 @@ async def insert_news_in_db(title: str, content: str, url: str, slug: str):
         print("✅ News added in NewsFeed Table")
     finally:
         await client.close()
+
+
+async def insert_now_note_in_db(content: str):
+    client = _create_db_client()
+
+    try:
+        now = datetime.utcnow().isoformat()
+        query = """
+        INSERT INTO NowNoteFeed (content, published)
+        VALUES (?, ?)
+        """
+
+        await client.execute(query, [
+            content,
+            now
+        ])
+        print("✅ Now Note added in NowNoteFeed Table")
+    finally:
+        await client.close()
