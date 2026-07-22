@@ -26,5 +26,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./mock /app/mock
 COPY ./prompts /app/prompts
 COPY ./app.py /app/app.py
+COPY ./server.py /app/server.py
 COPY ./nx_ai /app/nx_ai
+EXPOSE 8000
+CMD ["python", "server.py"]
 
