@@ -32,4 +32,4 @@ jobs:
           platforms: linux/amd64,linux/arm64
           target: prod
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/nx-ai:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/nx-mcp:latest
