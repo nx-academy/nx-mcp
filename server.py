@@ -2,10 +2,16 @@ import os
 import httpx
 import asyncio
 
+from typing import Optional
+
 from mcp.server.fastmcp import FastMCP
 
 from nx_ai.turso_service.turso_api import (
     insert_news_in_db,
+    list_news_from_db,
+    get_news_from_db,
+    update_news_in_db,
+    delete_news_from_db,
     insert_now_note_in_db
 )
 from nx_ai.github_service.github_api import trigger_gh_rebuild
@@ -124,6 +130,82 @@ async def publish_news(title: str, content: str, url: str) -> dict:
         "success": True,
         "message": f"✅  News published: {title}",
         "slug": slug
+    }
+
+
+@mcp.tool()
+async def list_news(limit: int = 50, offset: int = 0) -> dict:
+    """List news from the NewsFeed table, most recent first"""
+    news = await list_news_from_db(limit, offset)
+
+    return {
+        "success": True,
+        "count": len(news),
+        "news": news
+    }
+
+
+@mcp.tool()
+async def get_news(news_id: int) -> dict:
+    """Retrieve a single news from the NewsFeed table by its id"""
+    news = await get_news_from_db(news_id)
+
+    if news is None:
+        return {
+            "success": False,
+            "message": f"No news found with id: {news_id}"
+        }
+
+    return {
+        "success": True,
+        "news": news
+    }
+
+
+@mcp.tool()
+async def update_news(
+    news_id: int,
+    title: Optional[str] = None,
+    content: Optional[str] = None,
+    url: Optional[str] = None
+) -> dict:
+    """Update an existing news in the NewsFeed table and trigger a new build.
+
+    Only the provided fields are updated. Updating the title also refreshes
+    the slug accordingly.
+    """
+    rows_affected = await update_news_in_db(news_id, title, content, url)
+
+    if rows_affected == 0:
+        return {
+            "success": False,
+            "message": f"No news found with id: {news_id}"
+        }
+
+    trigger_gh_rebuild()
+
+    return {
+        "success": True,
+        "message": f"✅  News updated: {news_id}"
+    }
+
+
+@mcp.tool()
+async def delete_news(news_id: int) -> dict:
+    """Delete a news from the NewsFeed table and trigger a new build"""
+    rows_affected = await delete_news_from_db(news_id)
+
+    if rows_affected == 0:
+        return {
+            "success": False,
+            "message": f"No news found with id: {news_id}"
+        }
+
+    trigger_gh_rebuild()
+
+    return {
+        "success": True,
+        "message": f"✅  News deleted: {news_id}"
     }
 
 
