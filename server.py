@@ -12,10 +12,14 @@ from nx_ai.turso_service.turso_api import (
     get_news_from_db,
     update_news_in_db,
     delete_news_from_db,
-    insert_now_note_in_db
+    insert_now_note_in_db,
+    insert_recap_link_in_db,
+    list_recap_links_from_db,
+    get_recap_link_from_db
 )
 from nx_ai.github_service.github_api import trigger_gh_rebuild
 from nx_ai.utils.slugify import slugify_title
+from nx_ai.utils.url_checker import is_url_valid
 
 
 mcp = FastMCP("nx-mcp", host="0.0.0.0", port=8000)
@@ -220,6 +224,53 @@ async def publish_now_note(content: str) -> dict:
         "success": True,
         "message": f"✅  Now Note published: {content}",
     }
+
+
+@mcp.tool()
+async def publish_recap_link(description: str, url: str) -> dict:
+    """Insert a new link in the RecapLink table of the Turso Database"""
+    if not is_url_valid(url):
+        return {
+            "success": False,
+            "message": f"Invalid URL: {url}"
+        }
+
+    await insert_recap_link_in_db(description, url)
+
+    return {
+        "success": True,
+        "message": f"✅  Recap link published: {url}"
+    }
+
+
+@mcp.tool()
+async def list_recap_links(limit: int = 50, offset: int = 0) -> dict:
+    """List links from the RecapLink table, most recently added first"""
+    recap_links = await list_recap_links_from_db(limit, offset)
+
+    return {
+        "success": True,
+        "count": len(recap_links),
+        "recap_links": recap_links
+    }
+
+
+@mcp.tool()
+async def get_recap_link(recap_link_id: int) -> dict:
+    """Retrieve a single link from the RecapLink table by its id"""
+    recap_link = await get_recap_link_from_db(recap_link_id)
+
+    if recap_link is None:
+        return {
+            "success": False,
+            "message": f"No recap link found with id: {recap_link_id}"
+        }
+
+    return {
+        "success": True,
+        "recap_link": recap_link
+    }
+
 
 if __name__ == "__main__":
     mcp.run(transport="streamable-http")

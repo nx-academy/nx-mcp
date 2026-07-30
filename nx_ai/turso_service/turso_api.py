@@ -131,6 +131,60 @@ async def delete_news_from_db(news_id: int) -> int:
         await client.close()
 
 
+async def insert_recap_link_in_db(description: str, url: str):
+    client = _create_db_client()
+
+    try:
+        now = datetime.utcnow().isoformat()
+        query = """
+        INSERT INTO RecapLink (description, url, addedAt)
+        VALUES (?, ?, ?)
+        """
+
+        await client.execute(query, [
+            description,
+            url,
+            now
+        ])
+        print("✅ Recap Link added in RecapLink Table")
+    finally:
+        await client.close()
+
+
+async def list_recap_links_from_db(limit: int = 50, offset: int = 0) -> list[dict]:
+    client = _create_db_client()
+
+    try:
+        query = """
+        SELECT id, description, url, addedAt
+        FROM RecapLink
+        ORDER BY addedAt DESC
+        LIMIT ? OFFSET ?
+        """
+
+        result = await client.execute(query, [limit, offset])
+        return _rows_to_dicts(result)
+    finally:
+        await client.close()
+
+
+async def get_recap_link_from_db(recap_link_id: int) -> dict | None:
+    client = _create_db_client()
+
+    try:
+        query = """
+        SELECT id, description, url, addedAt
+        FROM RecapLink
+        WHERE id = ?
+        """
+
+        result = await client.execute(query, [recap_link_id])
+        rows = _rows_to_dicts(result)
+        return rows[0] if rows else None
+    finally:
+        await client.close()
+
+
 async def insert_now_note_in_db(content: str):
     client = _create_db_client()
 
