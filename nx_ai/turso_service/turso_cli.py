@@ -7,7 +7,10 @@ from nx_ai.turso_service.turso_api import (
     get_news_from_db,
     update_news_in_db,
     delete_news_from_db,
-    insert_now_note_in_db
+    insert_now_note_in_db,
+    insert_recap_link_in_db,
+    list_recap_links_from_db,
+    get_recap_link_from_db
 )
 from nx_ai.utils.slugify import slugify_title
 from nx_ai.utils.url_checker import is_url_valid
@@ -135,3 +138,59 @@ def create_now_note(content: str, simulate: bool):
     asyncio.run(insert_now_note_in_db(
         content
     ))
+
+
+@turso_group.command()
+@click.option("--description", prompt="Description",
+              help="The Recap Link's description")
+@click.option("--url", prompt="URL", help="The Recap Link's URL")
+@click.option("--simulate", is_flag=True,
+              help="Display the content of the link without creating it on DB")
+def create_recap_link(description: str, url: str, simulate: bool):
+    """Insert a link in the RecapLink table"""
+    if not is_url_valid(url):
+        raise RuntimeError("Please insert a valid URL")
+
+    if simulate:
+        print(f"""Here is the format of the recap link you're trying to create:
+              - Recap link description: {description}
+              - Recap link url: {url}
+              """)
+        return
+
+    asyncio.run(insert_recap_link_in_db(
+        description=description,
+        url=url
+    ))
+
+
+@turso_group.command()
+@click.option("--limit", default=50, show_default=True,
+              help="Maximum number of recap links to list")
+@click.option("--offset", default=0, show_default=True,
+              help="Number of recap links to skip")
+def list_recap_links(limit: int, offset: int):
+    """List links from the RecapLink table, most recently added first"""
+    recap_links = asyncio.run(list_recap_links_from_db(limit=limit, offset=offset))
+
+    if not recap_links:
+        print("No recap link found")
+        return
+
+    for item in recap_links:
+        print(f"[{item['id']}] {item['description']} - {item['url']} ({item['addedAt']})")
+
+
+@turso_group.command()
+@click.option("--recap-link-id", type=int, prompt="Recap link id",
+              help="The id of the recap link to display")
+def get_recap_link(recap_link_id: int):
+    """Display a single link from the RecapLink table by its id"""
+    recap_link = asyncio.run(get_recap_link_from_db(recap_link_id))
+
+    if recap_link is None:
+        print(f"No recap link found with id: {recap_link_id}")
+        return
+
+    for key, value in recap_link.items():
+        print(f"- {key}: {value}")
