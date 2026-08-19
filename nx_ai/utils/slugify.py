@@ -3,6 +3,7 @@ import unicodedata
 
 
 SLUG_RE = re.compile(r"[^a-z0-9\-]")
+FALLBACK_SLUG = "news"
 
 
 def _remove_accents(text: str) -> str:
@@ -13,9 +14,14 @@ def _remove_accents(text: str) -> str:
 
 
 def slugify_title(title: str) -> str:
-    s = title.strip().lower().replace("’", "-")
+    s = title.strip().lower()
+    s = re.sub(r"['’]", "-", s)
     s = _remove_accents(s)
     s = re.sub(r"\s+", "-", s)
     s = SLUG_RE.sub("", s)
     s = re.sub(r"-{2,}", "-", s)
-    return s[:80].strip("-")
+    s = s[:80].strip("-")
+
+    # A title made only of punctuation slugifies to an empty string, which the
+    # unique index on NewsFeed.slug would reject on its second occurrence.
+    return s or FALLBACK_SLUG

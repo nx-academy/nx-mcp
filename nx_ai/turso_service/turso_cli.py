@@ -2,7 +2,10 @@ import asyncio
 import click
 
 from nx_ai.turso_service.turso_api import (
+    inspect_news_schema,
     insert_news_in_db,
+    migration_status,
+    run_pending_migrations,
     list_news_from_db,
     get_news_from_db,
     update_news_in_db,
@@ -25,20 +28,26 @@ def turso_group():
 @turso_group.command()
 @click.option("--title", prompt="Title",
               help="The News' Title")
-@click.option("--content", prompt="Content",
-              help="The News' Content")
+@click.option("--context", prompt="Context",
+              help="The News' Context, e.g. the factual summary of the source")
+@click.option("--lecture", default=None,
+              help="The News' Lecture, e.g. your own commentary. Omit for an "
+                   "old-format entry")
 @click.option("--url", prompt="URL", help="The News's URL, e.g. where it comes from")
 @click.option("--simulate", is_flag=True,
               help="Display the content of the news without creating it on DB")
-def create_news(title: str, content: str, url: str, simulate: bool):
+def create_news(title: str, context: str, lecture: str, url: str, simulate: bool):
     """Insert a News in NewsFeed table"""
     if not is_url_valid(url):
         raise RuntimeError("Please insert a valid URL")
     
     if simulate:
+        # The slug shown here is the unsuffixed one: the collision check needs
+        # the database, which a simulation deliberately does not touch.
         print(f"""Here is the format of the news you're trying to create:
               - News title: {title}
-              - News content: {content}
+              - News context: {context}
+              - News lecture: {lecture}
               - News url: {url}
               - News slug: {slugify_title(title)}
               """)
@@ -46,9 +55,9 @@ def create_news(title: str, content: str, url: str, simulate: bool):
     
     asyncio.run(insert_news_in_db(
         title=title,
-        content=content,
+        context=context,
         url=url,
-        slug=slugify_title(title)
+        lecture=lecture
     ))
 
 
@@ -88,12 +97,15 @@ def get_news(news_id: int):
 @click.option("--news-id", type=int, prompt="News id",
               help="The id of the news to update")
 @click.option("--title", default=None, help="The new title (also refreshes the slug)")
-@click.option("--content", default=None, help="The new content")
+@click.option("--context", default=None, help="The new context")
+@click.option("--lecture", default=None, help="The new lecture")
 @click.option("--url", default=None, help="The new URL")
-def update_news(news_id: int, title: str, content: str, url: str):
+def update_news(news_id: int, title: str, context: str, lecture: str, url: str):
     """Update an existing news in the NewsFeed table"""
-    if title is None and content is None and url is None:
-        raise RuntimeError("Provide at least one of --title, --content or --url")
+    if title is None and context is None and lecture is None and url is None:
+        raise RuntimeError(
+            "Provide at least one of --title, --context, --lecture or --url"
+        )
 
     if url is not None and not is_url_valid(url):
         raise RuntimeError("Please insert a valid URL")
@@ -101,8 +113,9 @@ def update_news(news_id: int, title: str, content: str, url: str):
     rows_affected = asyncio.run(update_news_in_db(
         news_id=news_id,
         title=title,
-        content=content,
-        url=url
+        context=context,
+        url=url,
+        lecture=lecture
     ))
 
     if rows_affected == 0:
@@ -194,3 +207,54 @@ def get_recap_link(recap_link_id: int):
 
     for key, value in recap_link.items():
         print(f"- {key}: {value}")
+
+
+@turso_group.command()
+@click.option("--dry-run", is_flag=True,
+              help="List the migrations that would run, without applying them")
+def migrate(dry_run: bool):
+    """Apply the pending schema migrations to the Turso database"""
+    versions = asyncio.run(run_pending_migrations(dry_run=dry_run))
+
+    if not versions:
+        print("Schema is up to date, nothing to apply")
+        return
+
+    if dry_run:
+        print("Migrations that would be applied:")
+        for version in versions:
+            print(f"- {version}")
+        return
+
+    print(f"✅ {len(versions)} migration(s) applied")
+
+
+@turso_group.command()
+def migrate_status():
+    """Show which schema migrations have been applied"""
+    for version, applied in asyncio.run(migration_status()):
+        print(f"[{'x' if applied else ' '}] {version}")
+
+
+@turso_group.command()
+def inspect_schema():
+    """Show the live shape of the NewsFeed table and the health of its slugs"""
+    schema = asyncio.run(inspect_news_schema())
+
+    print(f"NewsFeed — {schema['count']} row(s)")
+
+    print("\nColumns:")
+    for column in schema["columns"]:
+        flag = " NOT NULL" if column["notnull"] else ""
+        print(f"- {column['name']}: {column['type']}{flag}")
+
+    print("\nIndexes:")
+    for index in schema["indexes"] or []:
+        print(f"- {index['name']}{' (unique)' if index['unique'] else ''}")
+    if not schema["indexes"]:
+        print("- none")
+
+    print(f"\nEmpty slugs: {schema['empty_slugs']}")
+    print(f"Duplicated slugs: {len(schema['duplicate_slugs'])}")
+    for duplicate in schema["duplicate_slugs"]:
+        print(f"- {duplicate['slug']} ({duplicate['total']})")

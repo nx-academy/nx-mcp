@@ -31,3 +31,20 @@ def test_slugify_truncation():
     slugy_title = slugify_title(title)
     
     assert len(slugy_title) <= 80
+
+
+def test_slugify_with_straight_apostrophe():
+    title = "L'actualité de l'IA"
+    slugy_title = slugify_title(title)
+
+    assert slugy_title == "l-actualite-de-l-ia"
+
+
+def test_slugify_falls_back_when_nothing_is_left():
+    # NewsFeed.slug carries a unique index, so an empty slug would be rejected
+    # the second time a title like this one came up
+    assert slugify_title("!!! ??? ...") == "news"
+
+
+def test_slugify_never_returns_a_trailing_dash():
+    assert not slugify_title("Docker en prod !").endswith("-")
