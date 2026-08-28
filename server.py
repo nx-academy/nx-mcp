@@ -18,7 +18,6 @@ from nx_ai.turso_service.turso_api import (
     get_recap_link_from_db
 )
 from nx_ai.github_service.github_api import trigger_gh_rebuild
-from nx_ai.utils.slugify import slugify_title
 from nx_ai.utils.url_checker import is_url_valid
 
 
@@ -117,15 +116,22 @@ def fetch_news_by_source(source: str) -> dict:
 
 
 @mcp.tool()
-async def publish_news(title: str, content: str, url: str) -> dict:
-    """Insert new in the Turso Database and trigger a new build"""
-    slug = slugify_title(title)
+async def publish_news(
+    title: str,
+    context: str,
+    url: str,
+    lecture: Optional[str] = None
+) -> dict:
+    """Insert a news in the Turso Database and trigger a new build.
 
-    await insert_news_in_db(
+    `context` is the factual summary of the source, `lecture` the author's own
+    commentary. Leaving `lecture` empty produces an old-format entry.
+    """
+    slug = await insert_news_in_db(
         title,
-        content,
+        context,
         url,
-        slug
+        lecture
     )
 
     trigger_gh_rebuild()
@@ -170,15 +176,16 @@ async def get_news(news_id: int) -> dict:
 async def update_news(
     news_id: int,
     title: Optional[str] = None,
-    content: Optional[str] = None,
-    url: Optional[str] = None
+    context: Optional[str] = None,
+    url: Optional[str] = None,
+    lecture: Optional[str] = None
 ) -> dict:
     """Update an existing news in the NewsFeed table and trigger a new build.
 
     Only the provided fields are updated. Updating the title also refreshes
     the slug accordingly.
     """
-    rows_affected = await update_news_in_db(news_id, title, content, url)
+    rows_affected = await update_news_in_db(news_id, title, context, url, lecture)
 
     if rows_affected == 0:
         return {
